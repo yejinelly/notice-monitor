@@ -1,0 +1,23 @@
+receiver_email: your-email@example.com
+
+# A notice is sent only when it matches a keyword rule and was not in the
+# previous run's history.
+sites:
+  - name: Example RSS feed
+    type: rss
+    url: https://example.org/notices/rss
+    keywords:
+      any: ["장학", "연구비", "펠로우십"]
+
+  # Use `html` for a conventional notice board. CSS selectors can be adjusted
+  # for each site in Streamlit's advanced settings.
+  - name: Example notice board
+    type: html
+    url: https://example.org/notices
+    keywords:
+      all: []
+      any: ["대학원", "GPU"]
+    selectors:
+      item: "tr"
+      title: "a"
+      date: "time, .date"
