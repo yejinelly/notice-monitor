@@ -19,15 +19,11 @@ with st.form("subscription"):
     email = st.text_input("알림을 받을 이메일", placeholder="you@example.com")
     site_name = st.text_input("추적할 채널 이름", placeholder="예: 학과 공지사항, 대학 장학금 게시판, 기관 사업공고")
     site_url = st.text_input("공지 페이지 또는 RSS 주소", placeholder="https://...")
-    any_keywords = st.text_input("관심 키워드", placeholder="장학, 대학원, 연구비, 공모")
-    all_keywords = st.text_input("반드시 포함할 키워드 (선택)", placeholder="예: 장학")
+    keywords_text = st.text_input("관심 키워드", placeholder="예: 장학, 대학원")
     schedule_label = st.selectbox("알림 시간", ["매일 오전 10시", "매일 오후 2시", "매일 오전 10시와 오후 2시"])
-    with st.expander("일반 웹 게시판의 고급 설정"):
-        st.caption("사이트별 HTML 구조가 다른 경우 CSS 선택자를 입력하세요. RSS에는 필요하지 않습니다.")
-        item_selector = st.text_input("게시글 묶음 선택자", value="tr")
-        title_selector = st.text_input("제목·링크 선택자", value="a")
-        date_selector = st.text_input("날짜 선택자", value="time, .date")
     submitted = st.form_submit_button("알림 등록", type="primary")
+
+selectors = {"item": "tr", "title": "a", "date": "time, .date"}
 
 if submitted:
     if not email or "@" not in email:
@@ -38,8 +34,8 @@ if submitted:
         subscription = {
             "email": email.strip(), "site_name": site_name.strip(), "site_url": site_url.strip(),
             "site_type": "auto",
-            "keywords": {"any": words(any_keywords), "all": words(all_keywords)},
-            "selectors": {"item": item_selector, "title": title_selector, "date": date_selector},
+            "keywords": {"any": [], "all": words(keywords_text)},
+            "selectors": selectors,
             "frequency": {
                 "매일 오전 10시": "schedule_10",
                 "매일 오후 2시": "schedule_14",
@@ -58,11 +54,11 @@ if st.button("입력한 조건으로 확인하기"):
     else:
         site = {
             "url": site_url, "type": "auto",
-            "selectors": {"item": item_selector, "title": title_selector, "date": date_selector},
+            "selectors": selectors,
         }
         try:
             with st.spinner("공지사항을 불러오고 있습니다..."):
-                notices = filter_notices(fetch_notices(site), {"any": words(any_keywords), "all": words(all_keywords)})
+                notices = filter_notices(fetch_notices(site), {"any": [], "all": words(keywords_text)})
             st.write(f"조건에 맞는 공지 {len(notices)}건")
             for notice in notices[:20]:
                 st.markdown(f"**{notice['title']}**")
