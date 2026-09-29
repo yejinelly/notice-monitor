@@ -77,7 +77,3 @@ python runner.py
 이메일 주소는 공지 알림에만 사용합니다. `.env`, Gmail OAuth 인증 파일, 토큰 파일, 구독 DB는 저장소에 올리지 않도록 `.gitignore`에 등록되어 있습니다.
 
 공개 운영 전에는 이메일 인증과 구독 해지 기능을 추가할 예정입니다.
-
-## License
-
-MIT
