@@ -22,7 +22,7 @@ with st.form("subscription"):
     site_type = st.radio("공지 형식", ["RSS", "일반 웹 게시판"], horizontal=True)
     any_keywords = st.text_input("관심 키워드", placeholder="장학, 대학원, 연구비, 공모")
     all_keywords = st.text_input("반드시 포함할 키워드 (선택)", placeholder="예: 장학")
-    frequency_label = st.selectbox("알림 주기", ["정기 실행마다 확인", "하루 한 번 확인"])
+    schedule_label = st.selectbox("알림 시간", ["매일 오전 10시", "매일 오후 2시", "매일 오전 10시와 오후 2시"])
     with st.expander("일반 웹 게시판의 고급 설정"):
         st.caption("사이트별 HTML 구조가 다른 경우 CSS 선택자를 입력하세요. RSS에는 필요하지 않습니다.")
         item_selector = st.text_input("게시글 묶음 선택자", value="tr")
@@ -41,7 +41,11 @@ if submitted:
             "site_type": "rss" if site_type == "RSS" else "html",
             "keywords": {"any": words(any_keywords), "all": words(all_keywords)},
             "selectors": {"item": item_selector, "title": title_selector, "date": date_selector},
-            "frequency": "every_run" if frequency_label == "정기 실행마다 확인" else "daily",
+            "frequency": {
+                "매일 오전 10시": "schedule_10",
+                "매일 오후 2시": "schedule_14",
+                "매일 오전 10시와 오후 2시": "schedule_10_14",
+            }[schedule_label],
         }
         save_subscription(subscription)
         st.success("알림을 등록했습니다. 첫 정기 실행은 현재 공지를 기준 목록으로 저장하고, 다음 실행부터 새 공지만 이메일로 보냅니다.")

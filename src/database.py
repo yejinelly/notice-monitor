@@ -78,15 +78,24 @@ def save_subscription(subscription: dict, db_path: str | Path = DEFAULT_DB_PATH)
     return int(row["id"])
 
 
-def due_subscriptions(db_path: str | Path = DEFAULT_DB_PATH) -> list[dict]:
+def due_subscriptions(db_path: str | Path = DEFAULT_DB_PATH, force: bool = False) -> list[dict]:
     """Return active subscriptions that should run in the current scheduler pass."""
-    today = datetime.now().date().isoformat()
+    now = datetime.now()
+    current_run = now.strftime("%Y-%m-%dT%H")
     with connect(db_path) as connection:
         rows = connection.execute("SELECT * FROM subscriptions WHERE active=1 ORDER BY id").fetchall()
     subscriptions = []
     for row in rows:
+        scheduled_hours = {
+            "schedule_10": {10},
+            "schedule_14": {14},
+            "schedule_10_14": {10, 14},
+            # Existing records from early versions remain usable.
+            "daily": {10, 14},
+            "every_run": {10, 14},
+        }.get(row["frequency"], {10, 14})
         last_checked = row["last_checked_at"] or ""
-        if row["frequency"] == "daily" and last_checked.startswith(today):
+        if not force and (now.hour not in scheduled_hours or last_checked.startswith(current_run)):
             continue
         subscriptions.append(_decode_subscription(row))
     return subscriptions

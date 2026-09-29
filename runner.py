@@ -9,9 +9,9 @@ from src.filters import filter_notices
 from src.notifier import send_notification
 
 
-def run(send: bool = True) -> list[str]:
+def run(send: bool = True, force: bool = False) -> list[str]:
     log, notices_by_email = [], defaultdict(list)
-    for subscription in due_subscriptions():
+    for subscription in due_subscriptions(force=force):
         try:
             site = {
                 "name": subscription["site_name"], "url": subscription["site_url"],
@@ -42,5 +42,6 @@ def run(send: bool = True) -> list[str]:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="공개 Notice Monitor Agent 정기 실행기")
     parser.add_argument("--no-send", action="store_true", help="이메일을 발송하지 않고 결과만 확인")
+    parser.add_argument("--force", action="store_true", help="설정한 시간을 무시하고 모든 구독을 확인")
     args = parser.parse_args()
-    print("\n".join(run(send=not args.no_send)) or "실행할 구독이 없습니다.")
+    print("\n".join(run(send=not args.no_send, force=args.force)) or "실행할 구독이 없습니다.")
