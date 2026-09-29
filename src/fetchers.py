@@ -30,6 +30,18 @@ def fetch_rss(site: dict) -> list[dict]:
         content = item.find("{http://purl.org/rss/1.0/modules/content/}encoded")
         body = BeautifulSoup(content.text or "", "html.parser").get_text(" ", strip=True) if content is not None else ""
         notices.append(_notice(title, item.findtext("link") or "", item.findtext("pubDate") or "", body))
+    # Atom feeds use <entry>, <updated>, and an href attribute on <link>.
+    for entry in root.findall(".//{*}entry"):
+        title = (entry.findtext("{*}title") or "").strip()
+        if not title:
+            continue
+        link_element = next(
+            (link for link in entry.findall("{*}link") if link.get("rel", "alternate") == "alternate"),
+            None,
+        )
+        link = link_element.get("href", "") if link_element is not None else ""
+        body = entry.findtext("{*}content") or entry.findtext("{*}summary") or ""
+        notices.append(_notice(title, link, entry.findtext("{*}published") or entry.findtext("{*}updated") or "", body))
     return notices
 
 
@@ -42,10 +54,18 @@ def fetch_html(site: dict) -> list[dict]:
     item_selector = selectors.get("item", "tr")
     title_selector = selectors.get("title", "a")
     date_selector = selectors.get("date", "time, .date")
+    # Some university boards use several tables for navigation and layout.
+    # Prefer the conventional notice-list table when it is available.
+    items = soup.select(item_selector)
+    if item_selector == "tr":
+        board_items = soup.select("table.basic_board_list tr")
+        if board_items:
+            items = board_items
+
     notices = []
     seen = set()
-    for item in soup.select(item_selector):
-        title_element = item.select_one(title_selector)
+    for item in items:
+        title_element = item.select_one("td.left a") or item.select_one(title_selector)
         if not title_element:
             continue
         title = title_element.get_text(" ", strip=True)
@@ -57,6 +77,12 @@ def fetch_html(site: dict) -> list[dict]:
         seen.add(title)
         date_element = item.select_one(date_selector)
         date = date_element.get_text(" ", strip=True) if date_element else ""
+        if not date:
+            # Common university-board markup: writer, date, and view count are
+            # separate desktop-only cells, with the date in the second cell.
+            metadata_cells = item.select("td.mob_none")
+            if len(metadata_cells) >= 2:
+                date = metadata_cells[1].get_text(" ", strip=True)
         notices.append(_notice(title, urljoin(site["url"], href), date))
     return notices
 

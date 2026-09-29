@@ -33,6 +33,8 @@
 
 사용자는 Google 계정이나 Gmail 권한을 연결하지 않습니다. Notice Monitor의 전용 Gmail 계정이 등록한 이메일 주소로 알림을 발송합니다.
 
+첫 정기 실행에서는 현재 조건에 맞는 공지를 기준 목록으로 저장하고, **등록 확인 이메일**을 보냅니다. 이후부터 새로 올라온 공지만 알려드립니다.
+
 > **웹앱 바로가기:** [notice-monitor.streamlit.app](https://notice-monitor.streamlit.app)
 
 ## 지원하는 공지 채널
@@ -46,14 +48,26 @@
 
 공지 채널을 추가하거나, 발신 계정·알림 시간을 직접 수정해 운영하려는 경우를 위한 안내입니다.
 
-### 1. Streamlit 화면 실행
+### 1. Supabase 데이터베이스 만들기
+
+Supabase 프로젝트의 **SQL Editor**에서 [`supabase/schema.sql`](supabase/schema.sql)을 실행합니다. 이 설정은 구독 정보와 이미 안내한 공지를 저장하며, 브라우저에는 공개하지 않는 `service_role` 키만 접근하도록 구성합니다.
+
+Streamlit Cloud에서 운영할 때는 앱의 **Settings → Secrets**에 다음 값을 넣습니다. 실제 서비스 키는 저장소나 화면에 공개하지 않습니다.
+
+```toml
+SUPABASE_URL = "https://<project-ref>.supabase.co"
+SUPABASE_SECRET_KEY = "<service_role_key>"
+PILOT_END_AT = "2026-10-30T23:59:59+09:00"
+```
+
+### 2. Streamlit 화면 실행
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### 2. Notice Monitor 발신 계정 설정
+### 3. Notice Monitor 발신 계정 설정
 
 Notice Monitor가 공통으로 사용할 전용 Gmail 발신 계정의 OAuth 인증 정보를 준비합니다. 구독자 개인의 Gmail OAuth는 수집하거나 저장하지 않습니다.
 
@@ -63,15 +77,30 @@ cp .env.example .env
 
 `.env`에서 인증 파일, 전용 발신 계정 token, Supabase 연결값을 설정합니다. 인증 파일, token, 서비스 키는 GitHub에 올리지 않습니다.
 
-### 3. 정기 실행
+### 4. 정기 실행
 
-기존 정기 실행 환경에서 아래 명령을 오전 10시와 오후 2시에 실행하도록 등록합니다.
+이 저장소에는 GitHub Actions 실행 설정이 포함되어 있습니다. GitHub 저장소의 **Settings → Secrets and variables → Actions**에 아래 비밀 값을 등록하면, 매일 한국 시간 오전 10시 5분과 오후 2시 5분에 실행됩니다. 개인 Mac이나 기존 장학금 Agent의 스케줄은 사용하지 않습니다.
+
+- `SUPABASE_URL`
+- `SUPABASE_SECRET_KEY`
+- `GMAIL_CREDENTIALS_JSON`: Google Cloud에서 내려받은 OAuth 클라이언트 JSON 파일 전체
+- `GMAIL_TOKEN_JSON`: Notice Monitor 전용 Gmail 계정으로 한 번 인증해 생성한 `token.json` 파일 전체
+
+처음에는 Actions 탭에서 **Run workflow**를 눌러 한 번 수동 실행해 등록 확인 이메일이 도착하는지 확인합니다.
+
+개인 환경에서 직접 실행하려면 아래 명령을 사용합니다.
 
 ```bash
 python runner.py
 ```
 
-`runner.py`는 등록된 사용자별 설정을 읽고, 새 공지가 있을 때만 이메일을 보냅니다.
+`runner.py`는 등록된 사용자별 설정을 읽고, 새 공지가 있을 때만 이메일을 보냅니다. GitHub Actions에서 발송이 실패하면 공지를 발송 완료로 기록하지 않으므로 다음 실행에서 다시 시도합니다.
+
+`--no-send`는 수집 결과만 확인하며, 기준 목록이나 마지막 확인 시각을 변경하지 않습니다.
+
+```bash
+python runner.py --force --no-send
+```
 
 ## 구현에 사용한 구성
 
@@ -84,4 +113,4 @@ python runner.py
 
 이메일 주소는 공지 알림에만 사용합니다. `.env`, Gmail OAuth 인증 파일, 토큰 파일, 구독 DB는 저장소에 올리지 않도록 `.gitignore`에 등록되어 있습니다.
 
-공개 운영 전에는 이메일 인증과 구독 해지 기능을 추가할 예정입니다.
+현재 파일럿에서는 등록 확인 이메일로 정상 등록 여부를 알려줍니다. 공개 서비스를 장기 운영하려면 이메일 소유 확인과 구독 해지 기능을 추가해야 합니다.

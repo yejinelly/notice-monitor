@@ -22,11 +22,8 @@ def _now() -> str:
     return datetime.now(KST).isoformat(timespec="seconds")
 
 
-def _checked_this_run(value: str | None, current_run: str) -> bool:
-    if not value:
-        return False
-    checked_at = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return checked_at.astimezone(KST).strftime("%Y-%m-%dT%H") == current_run
+def _as_kst(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(KST)
 
 
 def save_subscription(subscription: dict) -> int:
@@ -48,9 +45,8 @@ def save_subscription(subscription: dict) -> int:
 
 
 def due_subscriptions(force: bool = False) -> list[dict]:
-    """Return active subscriptions that should run in this KST scheduler pass."""
+    """Return active subscriptions whose latest KST schedule slot has passed."""
     now = datetime.now(KST)
-    current_run = now.strftime("%Y-%m-%dT%H")
     rows = _client().table("subscriptions").select("*").eq("active", True).order("id").execute().data
     due = []
     for row in rows:
@@ -61,7 +57,11 @@ def due_subscriptions(force: bool = False) -> list[dict]:
             "daily": {10, 14},
             "every_run": {10, 14},
         }.get(row["frequency"], {10, 14})
-        if not force and (now.hour not in scheduled_hours or _checked_this_run(row.get("last_checked_at"), current_run)):
+        slots = [now.replace(hour=hour, minute=0, second=0, microsecond=0) for hour in scheduled_hours]
+        elapsed_slots = [slot for slot in slots if slot <= now]
+        latest_slot = max(elapsed_slots) if elapsed_slots else None
+        last_checked = row.get("last_checked_at")
+        if not force and (latest_slot is None or (last_checked and _as_kst(last_checked) >= latest_slot)):
             continue
         due.append(_decode_subscription(row))
     return due
@@ -81,22 +81,41 @@ def is_first_check(subscription_id: int) -> bool:
     return response.data["last_checked_at"] is None
 
 
-def record_check(subscription_id: int, notices: list[dict]) -> list[dict]:
-    """Persist notices and return only links not previously sent for this subscription."""
+def fresh_notices(subscription_id: int, notices: list[dict]) -> list[dict]:
+    """Return notices not previously sent, without mutating subscription state."""
     client = _client()
     known_rows = client.table("seen_notices").select("fingerprint").eq("subscription_id", subscription_id).execute().data
     known = {row["fingerprint"] for row in known_rows}
     fresh = [notice for notice in notices if f"{notice.get('title', '')}|{notice.get('link', '')}" not in known]
-    if fresh:
-        client.table("seen_notices").insert([
-            {
-                "subscription_id": subscription_id,
-                "fingerprint": f"{notice.get('title', '')}|{notice.get('link', '')}",
-                "title": notice.get("title", ""),
-                "link": notice.get("link", ""),
-                "seen_at": _now(),
-            }
-            for notice in fresh
-        ]).execute()
-    client.table("subscriptions").update({"last_checked_at": _now()}).eq("id", subscription_id).execute()
     return fresh
+
+
+def _save_seen(subscription_id: int, notices: list[dict]) -> None:
+    if not notices:
+        return
+    _client().table("seen_notices").upsert([
+        {
+            "subscription_id": subscription_id,
+            "fingerprint": f"{notice.get('title', '')}|{notice.get('link', '')}",
+            "title": notice.get("title", ""),
+            "link": notice.get("link", ""),
+            "seen_at": _now(),
+        }
+        for notice in notices
+    ], on_conflict="subscription_id,fingerprint").execute()
+
+
+def mark_checked(subscription_id: int) -> None:
+    _client().table("subscriptions").update({"last_checked_at": _now()}).eq("id", subscription_id).execute()
+
+
+def save_baseline(subscription_id: int, notices: list[dict]) -> None:
+    """Save the current list as a baseline without treating it as new mail."""
+    _save_seen(subscription_id, notices)
+    mark_checked(subscription_id)
+
+
+def mark_sent(subscription_id: int, notices: list[dict]) -> None:
+    """Record notices only after their notification email was sent successfully."""
+    _save_seen(subscription_id, notices)
+    mark_checked(subscription_id)

@@ -27,6 +27,7 @@ with st.form("subscription"):
     keywords_text = st.text_input("관심 키워드", placeholder="예: 장학, 대학원")
     schedule_label = st.selectbox("알림 시간", ["매일 오전 10시", "매일 오후 2시", "매일 오전 10시와 오후 2시"])
     submitted = st.form_submit_button("알림 등록", type="primary")
+    previewed = st.form_submit_button("등록 전 공지 미리보기")
 
 selectors = {"item": "tr", "title": "a", "date": "time, .date"}
 
@@ -39,7 +40,7 @@ if submitted:
         subscription = {
             "email": email.strip(), "site_name": site_name.strip(), "site_url": site_url.strip(),
             "site_type": "auto",
-            "keywords": {"any": [], "all": words(keywords_text)},
+            "keywords": {"any": words(keywords_text), "all": []},
             "selectors": selectors,
             "frequency": {
                 "매일 오전 10시": "schedule_10",
@@ -47,13 +48,16 @@ if submitted:
                 "매일 오전 10시와 오후 2시": "schedule_10_14",
             }[schedule_label],
         }
-        save_subscription(subscription)
-        st.success("알림을 등록했습니다. Notice Monitor 전용 발신 계정이 다음 정기 실행부터 새 공지를 이메일로 알려드립니다.")
+        try:
+            save_subscription(subscription)
+            st.success("알림을 등록했습니다. 첫 정기 실행 때 등록 확인 메일을 받고, 그다음부터 새 공지를 이메일로 받아봅니다.")
+        except Exception:
+            st.error("현재 등록을 저장할 수 없습니다. 잠시 후 다시 시도해 주세요.")
 
 st.divider()
 st.subheader("등록 전 공지 미리보기")
-st.caption("등록하려는 주소와 키워드가 잘 작동하는지 확인할 수 있습니다. 미리보기는 구독 기록을 저장하지 않습니다.")
-if st.button("입력한 조건으로 확인하기"):
+st.caption("위 입력값으로 공지를 수집합니다. 키워드를 쉼표로 여러 개 입력하면 하나라도 포함된 공지를 보여줍니다. 미리보기는 구독 기록을 저장하지 않습니다.")
+if previewed:
     if not site_url.startswith(("https://", "http://")):
         st.warning("먼저 공지 주소를 입력하세요.")
     else:
@@ -63,8 +67,9 @@ if st.button("입력한 조건으로 확인하기"):
         }
         try:
             with st.spinner("공지사항을 불러오고 있습니다..."):
-                notices = filter_notices(fetch_notices(site), {"any": [], "all": words(keywords_text)})
-            st.write(f"조건에 맞는 공지 {len(notices)}건")
+                fetched = fetch_notices(site)
+                notices = filter_notices(fetched, {"any": words(keywords_text), "all": []})
+            st.write(f"전체 공지 {len(fetched)}건 중 조건에 맞는 공지 {len(notices)}건")
             for notice in notices[:20]:
                 st.markdown(f"**{notice['title']}**")
                 st.caption(notice.get("date") or "날짜 정보 없음")
