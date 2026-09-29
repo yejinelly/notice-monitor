@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Notice Monitor Agent | 중요한 공지를 구독하세요</title>
+    <style>
+      :root { --ink:#18212f; --muted:#667085; --paper:#fffdf8; --accent:#5b5cf0; --mint:#e6fbf3; }
+      * { box-sizing:border-box; }
+      body { margin:0; color:var(--ink); background:var(--paper); font-family:Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+      .wrap { width:min(1080px, calc(100% - 40px)); margin:auto; }
+      nav { display:flex; justify-content:space-between; align-items:center; padding:26px 0; }
+      .logo { font-weight:800; letter-spacing:-.5px; }
+      .tag { padding:7px 11px; border-radius:99px; background:#eef0ff; color:#4546bd; font-size:13px; font-weight:700; }
+      .hero { padding:72px 0 52px; display:grid; grid-template-columns:1.1fr .9fr; gap:42px; align-items:center; }
+      h1 { margin:14px 0 22px; font-size:clamp(42px, 6vw, 72px); line-height:1.08; letter-spacing:-4px; }
+      .lead { margin:0; color:var(--muted); font-size:19px; line-height:1.75; word-break:keep-all; }
+      .button { display:inline-block; margin-top:30px; border-radius:12px; padding:15px 20px; color:white; background:var(--accent); text-decoration:none; font-weight:700; }
+      .mockup { min-height:330px; padding:24px; border:1px solid #e5e7ef; border-radius:24px; background:white; box-shadow:0 18px 45px #3e438018; }
+      .mockup-title { color:var(--muted); font-size:14px; }
+      .mail { margin-top:20px; padding:18px; border-radius:15px; background:#f8f9fd; line-height:1.65; }
+      .mail strong { display:block; margin-bottom:7px; }
+      .link { color:var(--accent); font-weight:700; }
+      section { padding:78px 0; }
+      .eyebrow { color:var(--accent); font-weight:800; font-size:14px; }
+      h2 { margin:9px 0 15px; font-size:36px; letter-spacing:-2px; word-break:keep-all; }
+      .cards { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:30px; }
+      .card { padding:24px; border-radius:18px; background:white; border:1px solid #e8e7e2; }
+      .card h3 { margin:0 0 12px; font-size:18px; }
+      .card p { margin:0; color:var(--muted); line-height:1.65; word-break:keep-all; }
+      .flow { background:var(--mint); border-radius:24px; padding:36px; text-align:center; font-size:17px; font-weight:700; line-height:2.2; word-break:keep-all; }
+      .arrow { color:#18a276; padding:0 8px; }
+      .image-slot { margin-top:30px; padding:45px 25px; border:2px dashed #c9cedb; border-radius:20px; color:var(--muted); text-align:center; background:#fafbff; }
+      footer { padding:35px 0 50px; color:var(--muted); font-size:14px; }
+      @media (max-width:760px) { .hero { grid-template-columns:1fr; padding-top:42px; } .cards { grid-template-columns:1fr; } h1 { letter-spacing:-2.5px; } .flow { text-align:left; } .arrow { display:block; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <nav>
+        <div class="logo">🔔 Notice Monitor Agent</div>
+        <div class="tag">공지 구독 서비스</div>
+      </nav>
+
+      <section class="hero">
+        <div>
+          <div class="eyebrow">중요한 기회는, 구독하세요</div>
+          <h1>장학금 공지도<br>구독이 대세!</h1>
+          <p class="lead">매번 다른 게시판을 주기적으로 확인하고 계신가요? 학과·대학·외부기관에 흩어진 장학금, 연구비, 사업 공고를 한곳에서 관리하고 새 공지만 이메일로 받아보세요.</p>
+          <!-- Streamlit 배포 후 실제 URL로 교체하세요. -->
+          <a class="button" href="#how-it-works">어떻게 작동하나요? ↓</a>
+        </div>
+        <div class="mockup" aria-label="이메일 알림 예시">
+          <div class="mockup-title">받은편지함 · 새 관심 공지 2건</div>
+          <div class="mail">
+            <strong>🔔 새 관심 공지를 찾았습니다</strong>
+            [대학 장학금 게시판] 대학원 장학 안내<br>
+            <span class="link">원문 공지 바로 보기 →</span>
+          </div>
+          <div class="mail">
+            <strong>[외부기관 사업 공고] 연구비 지원사업</strong>
+            관심 키워드: 연구비, 대학원<br>
+            <span class="link">원문 공지 바로 보기 →</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="eyebrow">WHY NOTICE MONITOR?</div>
+        <h2>검색이 불편한 게시판도,<br>놓치지 않고 확인할 수 있을까요?</h2>
+        <div class="cards">
+          <article class="card"><h3>흩어진 공지</h3><p>학과, 단과대, 대학 본부, 외부기관마다 공지 채널이 달라 직접 찾아봐야 합니다.</p></article>
+          <article class="card"><h3>아쉬운 검색</h3><p>검색 기능이 부족하거나 키워드 검색이 어려운 게시판에서는 필요한 공고를 찾기 더 어렵습니다.</p></article>
+          <article class="card"><h3>놓치기 쉬운 기회</h3><p>장학금, 연구비, 공모, 사업 공고는 마감이 있어 늦게 발견하면 지원 기회를 잃을 수 있습니다.</p></article>
+        </div>
+      </section>
+
+      <section id="how-it-works">
+        <div class="eyebrow">HOW IT WORKS</div>
+        <h2>내가 정한 조건으로,<br>새 공지만 받아봅니다.</h2>
+        <div class="flow">이메일·추적 채널·관심 키워드 등록 <span class="arrow">→</span> 정기적으로 공지 확인 <span class="arrow">→</span> 이미 안내한 공지는 제외 <span class="arrow">→</span> 새 공지의 제목·날짜·링크 이메일 알림</div>
+      </section>
+
+      <section>
+        <div class="eyebrow">DEMO & RESULTS</div>
+        <h2>직접 확인하고, 바로 이동하세요.</h2>
+        <p class="lead">여기에 Streamlit 등록 화면, 공지 검색 결과, 실제 이메일 알림 캡처를 추가할 수 있습니다.</p>
+        <div class="image-slot">이미지 추가 영역<br><small>docs/images/ 폴더에 결과 화면을 넣은 뒤 이 영역을 이미지 태그로 교체하세요.</small></div>
+      </section>
+    </main>
+    <footer class="wrap">Notice Monitor Agent · 개인 맞춤형 공지 알림 서비스</footer>
+  </body>
+</html>
