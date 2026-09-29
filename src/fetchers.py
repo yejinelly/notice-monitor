@@ -63,6 +63,14 @@ def fetch_html(site: dict) -> list[dict]:
 
 def fetch_notices(site: dict) -> list[dict]:
     site_type = site.get("type", "html")
+    if site_type == "auto":
+        response = requests.get(site["url"], headers=HEADERS, timeout=20)
+        response.raise_for_status()
+        content_type = response.headers.get("content-type", "").lower()
+        opening = response.content.lstrip()[:200].lower()
+        if "xml" in content_type or opening.startswith(b"<?xml") or b"<rss" in opening or b"<feed" in opening:
+            return fetch_rss(site)
+        return fetch_html(site)
     if site_type == "rss":
         return fetch_rss(site)
     if site_type == "html":

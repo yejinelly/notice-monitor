@@ -19,7 +19,6 @@ with st.form("subscription"):
     email = st.text_input("알림을 받을 이메일", placeholder="you@example.com")
     site_name = st.text_input("추적할 채널 이름", placeholder="예: 학과 공지사항, 대학 장학금 게시판, 기관 사업공고")
     site_url = st.text_input("공지 페이지 또는 RSS 주소", placeholder="https://...")
-    site_type = st.radio("공지 형식", ["RSS", "일반 웹 게시판"], horizontal=True)
     any_keywords = st.text_input("관심 키워드", placeholder="장학, 대학원, 연구비, 공모")
     all_keywords = st.text_input("반드시 포함할 키워드 (선택)", placeholder="예: 장학")
     schedule_label = st.selectbox("알림 시간", ["매일 오전 10시", "매일 오후 2시", "매일 오전 10시와 오후 2시"])
@@ -38,7 +37,7 @@ if submitted:
     else:
         subscription = {
             "email": email.strip(), "site_name": site_name.strip(), "site_url": site_url.strip(),
-            "site_type": "rss" if site_type == "RSS" else "html",
+            "site_type": "auto",
             "keywords": {"any": words(any_keywords), "all": words(all_keywords)},
             "selectors": {"item": item_selector, "title": title_selector, "date": date_selector},
             "frequency": {
@@ -58,7 +57,7 @@ if st.button("입력한 조건으로 확인하기"):
         st.warning("먼저 공지 주소를 입력하세요.")
     else:
         site = {
-            "url": site_url, "type": "rss" if site_type == "RSS" else "html",
+            "url": site_url, "type": "auto",
             "selectors": {"item": item_selector, "title": title_selector, "date": date_selector},
         }
         try:
