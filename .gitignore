@@ -1,9 +1,15 @@
 .env
 .streamlit/secrets.toml
+config.yaml
 credentials*.json
+client_secret*.json
 token*.json
+*.pem
+*.key
 history/
 data/
+*.db
+*.sqlite
 __pycache__/
 *.py[cod]
 .venv/
