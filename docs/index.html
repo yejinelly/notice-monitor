@@ -37,6 +37,9 @@
       .flow-step { background:rgba(255,255,255,.6); border-radius:12px; padding:12px 24px; }
       .arrow { color:#18a276; font-size:23px; line-height:1; }
       .image-slot { margin-top:30px; padding:45px 25px; border:2px dashed #c9cedb; border-radius:20px; color:var(--muted); text-align:center; background:#fafbff; }
+      .email-example { margin:30px 0 0; overflow:hidden; border:1px solid #e1e4ec; border-radius:20px; background:white; box-shadow:0 12px 35px #3e438012; }
+      .email-example img { display:block; width:100%; height:auto; }
+      .email-example figcaption { padding:14px 18px; color:var(--muted); font-size:14px; text-align:left; }
       .closing { margin:15px 0 70px; padding:68px 30px; border-radius:26px; color:white; text-align:center; background:linear-gradient(135deg,#5b5cf0,#42b89b); }
       .closing p { margin:0; font-size:clamp(30px,4vw,52px); font-weight:800; letter-spacing:-2.5px; word-break:keep-all; }
       .closing .button { background:white; color:#4e56bb; margin-top:28px; }
@@ -99,8 +102,11 @@
       <section>
         <div class="eyebrow">DEMO & RESULTS</div>
         <h2>필요한 공고를 확인하고,<br>바로 지원을 준비하세요.</h2>
-        <p class="lead">여기에 Streamlit 등록 화면, 공지 검색 결과, 실제 이메일 알림 캡처를 추가할 수 있습니다.</p>
-        <div class="image-slot">이미지 추가 영역<br><small>docs/images/ 폴더에 결과 화면을 넣은 뒤 이 영역을 이미지 태그로 교체하세요.</small></div>
+        <p class="lead">새 공지의 제목·날짜·원문 링크를 한 통의 이메일로 받아 바로 확인할 수 있습니다.</p>
+        <figure class="email-example">
+          <img src="images/alert-email-example.png" alt="심리학과 장학금 관련 새 공지 세 건을 안내하는 Notice Monitor 이메일 예시">
+          <figcaption>실제 알림 이메일 예시 · 공지별 제목, 날짜, 원문 링크를 함께 제공합니다.</figcaption>
+        </figure>
       </section>
 
       <section class="closing">
