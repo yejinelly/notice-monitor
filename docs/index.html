@@ -40,6 +40,8 @@
       .closing { margin:15px 0 70px; padding:68px 30px; border-radius:26px; color:white; text-align:center; background:linear-gradient(135deg,#5b5cf0,#42b89b); }
       .closing p { margin:0; font-size:clamp(30px,4vw,52px); font-weight:800; letter-spacing:-2.5px; word-break:keep-all; }
       .closing .button { background:white; color:#4e56bb; margin-top:28px; }
+      .pilot-note { margin:18px 0 0; color:#edf0ff; font-size:14px; font-weight:500; line-height:1.65; }
+      .pilot-note a { color:white; font-weight:800; }
       footer { padding:35px 0 50px; color:var(--muted); font-size:14px; }
       @media (max-width:760px) { .hero { grid-template-columns:1fr; padding-top:42px; } .cards { grid-template-columns:1fr; } h1 { letter-spacing:-2.5px; } }
     </style>
@@ -48,7 +50,7 @@
     <main class="wrap">
       <nav>
         <div class="logo">🔔 Notice Monitor Agent</div>
-        <div class="tag">관심 기회 구독 서비스</div>
+        <div class="tag">개인 맞춤형 관심 기회 알리미</div>
       </nav>
 
       <section class="hero">
@@ -105,6 +107,7 @@
         <p>정보를 찾는 시간 대신,<br>지원을 준비하는 시간으로.</p>
         <!-- Streamlit 배포 URL이 달라지면 아래 주소를 교체하세요. -->
         <a class="button" href="https://notice-monitor.streamlit.app" target="_blank" rel="noreferrer">내 관심 기회 구독하기 →</a>
+        <div class="pilot-note">공개 파일럿은 2026년 10월 30일까지 운영됩니다.<br>이후에도 <a href="https://github.com/yejinelly/notice-monitor" target="_blank" rel="noreferrer">GitHub에서 복제</a>해 개인용 Agent로 사용할 수 있습니다.</div>
       </section>
     </main>
     <footer class="wrap">Notice Monitor Agent · 개인 맞춤형 관심 기회 알리미</footer>

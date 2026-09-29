@@ -7,9 +7,12 @@ from src.database import due_subscriptions, is_first_check, record_check
 from src.fetchers import fetch_notices
 from src.filters import filter_notices
 from src.notifier import send_notification
+from src.pilot import end_message, is_active
 
 
 def run(send: bool = True, force: bool = False) -> list[str]:
+    if not is_active():
+        return [end_message() + " 정기 알림을 실행하지 않습니다."]
     log, notices_by_email = [], defaultdict(list)
     for subscription in due_subscriptions(force=force):
         try:

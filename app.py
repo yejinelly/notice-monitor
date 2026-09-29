@@ -4,10 +4,15 @@ import streamlit as st
 from src.database import save_subscription
 from src.fetchers import fetch_notices
 from src.filters import filter_notices
+from src.pilot import end_message, is_active
 
 st.set_page_config(page_title="Notice Monitor Agent", page_icon="🔔")
 st.title("🔔 Notice Monitor Agent")
 st.caption("학과·대학·외부기관 공지에서 관심 있는 새 공지만 이메일로 알려드립니다.")
+
+if not is_active():
+    st.info(end_message() + " 이 저장소를 복제해 개인용 Agent로 계속 운영할 수 있습니다.")
+    st.stop()
 
 
 def words(value: str) -> list[str]:
@@ -43,7 +48,7 @@ if submitted:
             }[schedule_label],
         }
         save_subscription(subscription)
-        st.success("알림을 등록했습니다. 첫 정기 실행은 현재 공지를 기준 목록으로 저장하고, 다음 실행부터 새 공지만 이메일로 보냅니다.")
+        st.success("알림을 등록했습니다. Notice Monitor 전용 발신 계정이 다음 정기 실행부터 새 공지를 이메일로 알려드립니다.")
 
 st.divider()
 st.subheader("등록 전 공지 미리보기")
@@ -68,4 +73,4 @@ if st.button("입력한 조건으로 확인하기"):
             st.error(f"공지 확인에 실패했습니다: {error}")
 
 st.divider()
-st.caption("등록된 이메일과 구독 설정은 공지 알림 목적으로만 사용됩니다. 구독 해지·관리 기능은 다음 버전에서 제공합니다.")
+st.caption("등록된 이메일과 구독 설정은 공지 알림 목적으로만 사용됩니다. 이 파일럿은 2026년 10월 30일까지 운영되며, 종료 후 구독 데이터는 삭제합니다.")

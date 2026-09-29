@@ -10,7 +10,7 @@ sites:
       any: ["장학", "연구비", "펠로우십"]
 
   # Use `html` for a conventional notice board. CSS selectors can be adjusted
-  # for each site in Streamlit's advanced settings.
+  # when self-hosting a personal copy of the Agent.
   - name: Example notice board
     type: html
     url: https://example.org/notices

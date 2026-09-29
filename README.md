@@ -4,6 +4,12 @@
 
 학과 게시판, 대학·단과대 공지사항, 외부기관 공고 중 관심 있는 채널을 등록하면, 관련된 **새 공지만** 이메일로 알려줍니다.
 
+## 한시적 파일럿 운영 안내
+
+이 프로젝트는 **2026년 10월 30일(금)까지** 운영하는 공개 파일럿입니다. 종료일 이후에는 신규 등록과 정기 알림을 중단하며, Notice Monitor 운영 전용 Gmail의 OAuth 권한과 구독 데이터를 종료 절차에 따라 해제·삭제합니다.
+
+파일럿 종료 후에도 이 저장소를 복제해 자신의 Gmail OAuth와 정기 실행 환경을 설정하면, 개인용 Notice Monitor Agent로 계속 운영할 수 있습니다.
+
 ## 어떻게 작동하나요?
 
 ```text
@@ -25,7 +31,9 @@
 - 관심 키워드: 예) `장학, 대학원, 연구비, 공모`
 - 알림 시간: 예) 매일 오전 10시, 오후 2시
 
-> **웹앱 바로가기:** Streamlit 배포 후 이곳에 링크를 추가합니다.
+사용자는 Google 계정이나 Gmail 권한을 연결하지 않습니다. Notice Monitor의 전용 Gmail 계정이 등록한 이메일 주소로 알림을 발송합니다.
+
+> **웹앱 바로가기:** [notice-monitor.streamlit.app](https://notice-monitor.streamlit.app)
 
 ## 지원하는 공지 채널
 
@@ -45,15 +53,15 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### 2. 이메일 발신 계정 설정
+### 2. Notice Monitor 발신 계정 설정
 
-Gmail API를 사용할 발신 계정의 OAuth 인증 정보를 준비합니다.
+Notice Monitor가 공통으로 사용할 전용 Gmail 발신 계정의 OAuth 인증 정보를 준비합니다. 구독자 개인의 Gmail OAuth는 수집하거나 저장하지 않습니다.
 
 ```bash
 cp .env.example .env
 ```
 
-`.env`에서 인증 파일과 구독 정보 DB 경로를 설정합니다. 인증 파일, 토큰, DB 파일은 GitHub에 올리지 않습니다.
+`.env`에서 인증 파일, 전용 발신 계정 token, Supabase 연결값을 설정합니다. 인증 파일, token, 서비스 키는 GitHub에 올리지 않습니다.
 
 ### 3. 정기 실행
 
@@ -68,7 +76,7 @@ python runner.py
 ## 구현에 사용한 구성
 
 - **Streamlit**: 공지 채널과 알림 조건을 등록하는 화면
-- **SQLite**: 사용자별 설정과 이미 안내한 공지 기록 저장
+- **Supabase**: 사용자별 설정과 이미 안내한 공지 기록을 공유 저장
 - **RSS·웹 게시판 수집기**: 최신 공지 확인
 - **Gmail API**: 새 공지 이메일 알림 발송
 

@@ -1,137 +1,102 @@
-"""Persistent subscription and deduplication storage for the public agent."""
-import json
+"""Supabase-backed subscription and deduplication storage."""
 import os
-import sqlite3
 from datetime import datetime
-from pathlib import Path
 
-DEFAULT_DB_PATH = Path(os.environ.get("DATABASE_PATH", "data/notice_monitor.db"))
+from dotenv import load_dotenv
+from supabase import Client, create_client
 
-
-def connect(db_path: str | Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
-    path = Path(db_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(path)
-    connection.row_factory = sqlite3.Row
-    connection.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            id INTEGER PRIMARY KEY,
-            email TEXT NOT NULL,
-            site_name TEXT NOT NULL,
-            site_url TEXT NOT NULL,
-            site_type TEXT NOT NULL,
-            keywords_json TEXT NOT NULL,
-            selectors_json TEXT NOT NULL,
-            frequency TEXT NOT NULL DEFAULT 'daily',
-            active INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT NOT NULL,
-            last_checked_at TEXT,
-            UNIQUE(email, site_url)
-        );
-        CREATE TABLE IF NOT EXISTS seen_notices (
-            subscription_id INTEGER NOT NULL,
-            fingerprint TEXT NOT NULL,
-            title TEXT NOT NULL,
-            link TEXT NOT NULL,
-            seen_at TEXT NOT NULL,
-            PRIMARY KEY(subscription_id, fingerprint),
-            FOREIGN KEY(subscription_id) REFERENCES subscriptions(id)
-        );
-        """
-    )
-    return connection
+from src.pilot import KST
 
 
-def save_subscription(subscription: dict, db_path: str | Path = DEFAULT_DB_PATH) -> int:
-    """Create or update a user's subscription for a site."""
-    now = datetime.now().isoformat(timespec="seconds")
-    with connect(db_path) as connection:
-        connection.execute(
-            """
-            INSERT INTO subscriptions
-                (email, site_name, site_url, site_type, keywords_json, selectors_json, frequency, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(email, site_url) DO UPDATE SET
-                site_name=excluded.site_name,
-                site_type=excluded.site_type,
-                keywords_json=excluded.keywords_json,
-                selectors_json=excluded.selectors_json,
-                frequency=excluded.frequency,
-                active=1
-            """,
-            (
-                subscription["email"],
-                subscription["site_name"],
-                subscription["site_url"],
-                subscription["site_type"],
-                json.dumps(subscription.get("keywords", {}), ensure_ascii=False),
-                json.dumps(subscription.get("selectors", {}), ensure_ascii=False),
-                subscription.get("frequency", "daily"),
-                now,
-            ),
-        )
-        row = connection.execute(
-            "SELECT id FROM subscriptions WHERE email=? AND site_url=?",
-            (subscription["email"], subscription["site_url"]),
-        ).fetchone()
-    return int(row["id"])
+def _client() -> Client:
+    """Create a server-only client. Never expose this key in browser code."""
+    load_dotenv()
+    url = os.environ.get("SUPABASE_URL")
+    service_key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not service_key:
+        raise RuntimeError("SUPABASE_URL과 SUPABASE_SECRET_KEY를 설정하세요.")
+    return create_client(url, service_key)
 
 
-def due_subscriptions(db_path: str | Path = DEFAULT_DB_PATH, force: bool = False) -> list[dict]:
-    """Return active subscriptions that should run in the current scheduler pass."""
-    now = datetime.now()
+def _now() -> str:
+    return datetime.now(KST).isoformat(timespec="seconds")
+
+
+def _checked_this_run(value: str | None, current_run: str) -> bool:
+    if not value:
+        return False
+    checked_at = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return checked_at.astimezone(KST).strftime("%Y-%m-%dT%H") == current_run
+
+
+def save_subscription(subscription: dict) -> int:
+    """Create or update one recipient's subscription for a site."""
+    row = {
+        "email": subscription["email"].strip().lower(),
+        "site_name": subscription["site_name"],
+        "site_url": subscription["site_url"],
+        "site_type": subscription.get("site_type", "auto"),
+        "keywords_json": subscription.get("keywords", {}),
+        "selectors_json": subscription.get("selectors", {}),
+        "frequency": subscription.get("frequency", "schedule_10_14"),
+        "active": True,
+    }
+    response = _client().table("subscriptions").upsert(
+        row, on_conflict="email,site_url"
+    ).execute()
+    return int(response.data[0]["id"])
+
+
+def due_subscriptions(force: bool = False) -> list[dict]:
+    """Return active subscriptions that should run in this KST scheduler pass."""
+    now = datetime.now(KST)
     current_run = now.strftime("%Y-%m-%dT%H")
-    with connect(db_path) as connection:
-        rows = connection.execute("SELECT * FROM subscriptions WHERE active=1 ORDER BY id").fetchall()
-    subscriptions = []
+    rows = _client().table("subscriptions").select("*").eq("active", True).order("id").execute().data
+    due = []
     for row in rows:
         scheduled_hours = {
             "schedule_10": {10},
             "schedule_14": {14},
             "schedule_10_14": {10, 14},
-            # Existing records from early versions remain usable.
             "daily": {10, 14},
             "every_run": {10, 14},
         }.get(row["frequency"], {10, 14})
-        last_checked = row["last_checked_at"] or ""
-        if not force and (now.hour not in scheduled_hours or last_checked.startswith(current_run)):
+        if not force and (now.hour not in scheduled_hours or _checked_this_run(row.get("last_checked_at"), current_run)):
             continue
-        subscriptions.append(_decode_subscription(row))
-    return subscriptions
+        due.append(_decode_subscription(row))
+    return due
 
 
-def _decode_subscription(row: sqlite3.Row) -> dict:
+def _decode_subscription(row: dict) -> dict:
     return {
         "id": row["id"], "email": row["email"], "site_name": row["site_name"],
         "site_url": row["site_url"], "site_type": row["site_type"],
-        "keywords": json.loads(row["keywords_json"]), "selectors": json.loads(row["selectors_json"]),
-        "frequency": row["frequency"], "last_checked_at": row["last_checked_at"],
+        "keywords": row["keywords_json"], "selectors": row["selectors_json"],
+        "frequency": row["frequency"], "last_checked_at": row.get("last_checked_at"),
     }
 
 
-def is_first_check(subscription_id: int, db_path: str | Path = DEFAULT_DB_PATH) -> bool:
-    with connect(db_path) as connection:
-        row = connection.execute("SELECT last_checked_at FROM subscriptions WHERE id=?", (subscription_id,)).fetchone()
-    return not row or row["last_checked_at"] is None
+def is_first_check(subscription_id: int) -> bool:
+    response = _client().table("subscriptions").select("last_checked_at").eq("id", subscription_id).single().execute()
+    return response.data["last_checked_at"] is None
 
 
-def record_check(subscription_id: int, notices: list[dict], db_path: str | Path = DEFAULT_DB_PATH) -> list[dict]:
-    """Persist seen notices and return only previously unseen items."""
-    now = datetime.now().isoformat(timespec="seconds")
-    fresh = []
-    with connect(db_path) as connection:
-        for notice in notices:
-            fingerprint = f"{notice.get('title', '')}|{notice.get('link', '')}"
-            exists = connection.execute(
-                "SELECT 1 FROM seen_notices WHERE subscription_id=? AND fingerprint=?",
-                (subscription_id, fingerprint),
-            ).fetchone()
-            if not exists:
-                fresh.append(notice)
-                connection.execute(
-                    "INSERT INTO seen_notices (subscription_id, fingerprint, title, link, seen_at) VALUES (?, ?, ?, ?, ?)",
-                    (subscription_id, fingerprint, notice.get("title", ""), notice.get("link", ""), now),
-                )
-        connection.execute("UPDATE subscriptions SET last_checked_at=? WHERE id=?", (now, subscription_id))
+def record_check(subscription_id: int, notices: list[dict]) -> list[dict]:
+    """Persist notices and return only links not previously sent for this subscription."""
+    client = _client()
+    known_rows = client.table("seen_notices").select("fingerprint").eq("subscription_id", subscription_id).execute().data
+    known = {row["fingerprint"] for row in known_rows}
+    fresh = [notice for notice in notices if f"{notice.get('title', '')}|{notice.get('link', '')}" not in known]
+    if fresh:
+        client.table("seen_notices").insert([
+            {
+                "subscription_id": subscription_id,
+                "fingerprint": f"{notice.get('title', '')}|{notice.get('link', '')}",
+                "title": notice.get("title", ""),
+                "link": notice.get("link", ""),
+                "seen_at": _now(),
+            }
+            for notice in fresh
+        ]).execute()
+    client.table("subscriptions").update({"last_checked_at": _now()}).eq("id", subscription_id).execute()
     return fresh

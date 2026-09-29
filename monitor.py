@@ -7,6 +7,7 @@ from src.fetchers import fetch_notices
 from src.filters import filter_notices
 from src.history import find_new_notices, save_history
 from src.notifier import send_notification
+from src.pilot import end_message, is_active
 
 
 def check(config: dict, update_history: bool = True) -> tuple[list[dict], list[str]]:
@@ -33,6 +34,9 @@ def check(config: dict, update_history: bool = True) -> tuple[list[dict], list[s
 
 
 def main() -> None:
+    if not is_active():
+        print(end_message() + " 알림을 실행하지 않습니다.")
+        return
     parser = argparse.ArgumentParser(description="관심 공지 모니터")
     parser.add_argument("--config", default="config.yaml", help="설정 파일 경로 (기본: config.yaml)")
     parser.add_argument("--send", action="store_true", help="새 공지가 있으면 Gmail 알림 전송")

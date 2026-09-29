@@ -27,6 +27,7 @@ def _service():
 
 
 def send_notification(receiver: str, notices: list[dict]) -> bool:
+    """Send from the operator's dedicated Notice Monitor Gmail account."""
     if not notices:
         return False
     lines = [f"새로운 관심 공지 {len(notices)}건을 찾았습니다.", ""]
