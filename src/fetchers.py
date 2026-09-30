@@ -5,7 +5,19 @@ import xml.etree.ElementTree as ET
 import requests
 from bs4 import BeautifulSoup
 
-HEADERS = {"User-Agent": "NoticeMonitorAgent/1.0 (+https://github.com/)"}
+# Some university boards return an empty layout to an obvious automation user
+# agent, especially from cloud-hosted applications. Request the public page in
+# the same form as a normal desktop browser; no login or private endpoint is
+# used.
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+}
 
 
 def _notice(title: str, link: str, date: str = "", body: str = "") -> dict:
