@@ -79,22 +79,22 @@ cp .env.example .env
 
 ### 4. 정기 실행
 
-이 저장소에는 GitHub Actions 실행 설정이 포함되어 있습니다. GitHub 저장소의 **Settings → Secrets and variables → Actions**에 아래 비밀 값을 등록하면, 매일 한국 시간 오전 10시 5분과 오후 2시 5분에 실행됩니다. 개인 Mac이나 기존 장학금 Agent의 스케줄은 사용하지 않습니다.
+공개 알림을 보내는 실행기는 하나만 운영해야 합니다. 이 파일럿에서는 Mac의 별도 공개용 실행기가 발송을 담당하며, 기존 개인 장학금 Agent와는 분리합니다.
+
+이 저장소의 GitHub Actions는 **수동 진단용**입니다. 정기 실행·이메일 발송·DB 기록 변경을 하지 않으며, Cloud 환경에서 게시판이 어떻게 응답하는지만 확인합니다. GitHub 저장소의 **Settings → Secrets and variables → Actions**에 아래 비밀 값을 등록하면 사용할 수 있습니다.
 
 - `SUPABASE_URL`
 - `SUPABASE_SECRET_KEY`
-- `GMAIL_CREDENTIALS_JSON`: Google Cloud에서 내려받은 OAuth 클라이언트 JSON 파일 전체
-- `GMAIL_TOKEN_JSON`: Notice Monitor 전용 Gmail 계정으로 한 번 인증해 생성한 `token.json` 파일 전체
 
-처음에는 Actions 탭에서 **Run workflow**를 눌러 한 번 수동 실행해 등록 확인 이메일이 도착하는지 확인합니다.
+Actions 탭에서 **Run workflow**를 누르면 수집 결과만 로그에 표시합니다.
 
-개인 환경에서 직접 실행하려면 아래 명령을 사용합니다.
+발송기 환경에서는 전용 Gmail OAuth 파일과 Supabase 연결값을 `.env`에 설정한 뒤 아래 명령을 오전 10시·오후 2시에 실행합니다.
 
 ```bash
 python runner.py
 ```
 
-`runner.py`는 등록된 사용자별 설정을 읽고, 새 공지가 있을 때만 이메일을 보냅니다. GitHub Actions에서 발송이 실패하면 공지를 발송 완료로 기록하지 않으므로 다음 실행에서 다시 시도합니다.
+`runner.py`는 등록된 사용자별 설정을 읽고, 새 공지가 있을 때만 이메일을 보냅니다. 발송이 실패하면 공지를 발송 완료로 기록하지 않으므로 다음 실행에서 다시 시도합니다.
 
 `--no-send`는 수집 결과만 확인하며, 기준 목록이나 마지막 확인 시각을 변경하지 않습니다.
 
