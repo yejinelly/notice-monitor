@@ -1,5 +1,6 @@
 from datetime import datetime
-from urllib.parse import urljoin
+import re
+from urllib.parse import urljoin, urlparse
 import xml.etree.ElementTree as ET
 
 import requests
@@ -20,6 +21,57 @@ HEADERS = {
 }
 
 
+_CHALLENGE_HEX = re.compile(r'toNumbers\("([0-9a-f]+)"\)')
+_CHALLENGE_REDIRECT = re.compile(r'location\.href="([^"]+)"')
+
+
+def _unpad(data: bytes) -> bytes:
+    """Mirror slowAES.unpadBytesOut so the cookie matches the browser's."""
+    pad_byte, pad_count = -1, 0
+    for i in range(len(data) - 1, len(data) - 18, -1):
+        if i < 0 or data[i] > 16:
+            break
+        if pad_byte == -1:
+            pad_byte = data[i]
+        if data[i] != pad_byte:
+            pad_count = 0
+            break
+        pad_count += 1
+        if pad_count == pad_byte:
+            break
+    return data[:len(data) - pad_count] if pad_count else data
+
+
+def _solve_cookie_challenge(session: requests.Session, response: requests.Response) -> requests.Response:
+    """Some hosting providers answer cloud IPs with a JavaScript page that sets
+    an AES-derived cookie and reloads. Compute the same cookie and reload."""
+    text = response.text
+    if "slowAES.decrypt" not in text or len(text) > 5000:
+        return response
+    values = _CHALLENGE_HEX.findall(text)
+    cookie = re.search(r'document\.cookie="(\w+)="', text)
+    redirect = _CHALLENGE_REDIRECT.search(text)
+    if len(values) < 3 or not cookie or not redirect:
+        return response
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+    key, iv, cipher_text = (bytes.fromhex(value) for value in values[:3])
+    decryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
+    plain = _unpad(decryptor.update(cipher_text) + decryptor.finalize())
+    host = urlparse(response.url).hostname
+    session.cookies.set(cookie.group(1), plain.hex(), domain=host, path="/")
+    retry = session.get(urljoin(response.url, redirect.group(1)), headers=HEADERS, timeout=20)
+    retry.raise_for_status()
+    return retry
+
+
+def _get(url: str) -> requests.Response:
+    session = requests.Session()
+    response = session.get(url, headers=HEADERS, timeout=20)
+    response.raise_for_status()
+    return _solve_cookie_challenge(session, response)
+
+
 def _notice(title: str, link: str, date: str = "", body: str = "") -> dict:
     return {
         "title": title.strip(),
@@ -31,8 +83,7 @@ def _notice(title: str, link: str, date: str = "", body: str = "") -> dict:
 
 
 def fetch_rss(site: dict) -> list[dict]:
-    response = requests.get(site["url"], headers=HEADERS, timeout=20)
-    response.raise_for_status()
+    response = _get(site["url"])
     root = ET.fromstring(response.content)
     notices = []
     for item in root.findall(".//item"):
@@ -59,8 +110,7 @@ def fetch_rss(site: dict) -> list[dict]:
 
 def fetch_html(site: dict) -> list[dict]:
     """Fetch a conventional HTML board using CSS selectors supplied by the user."""
-    response = requests.get(site["url"], headers=HEADERS, timeout=20)
-    response.raise_for_status()
+    response = _get(site["url"])
     soup = BeautifulSoup(response.text, "html.parser")
     selectors = site.get("selectors", {})
     item_selector = selectors.get("item", "tr")
@@ -73,6 +123,9 @@ def fetch_html(site: dict) -> list[dict]:
         board_items = soup.select("table.basic_board_list tr")
         if board_items:
             items = board_items
+        elif not soup.select("tr"):
+            # WordPress KBoard boards list notices as <li> rows, not a table.
+            items = soup.select("ul.board_body > li")
 
     notices = []
     seen = set()
@@ -102,8 +155,7 @@ def fetch_html(site: dict) -> list[dict]:
 def fetch_notices(site: dict) -> list[dict]:
     site_type = site.get("type", "html")
     if site_type == "auto":
-        response = requests.get(site["url"], headers=HEADERS, timeout=20)
-        response.raise_for_status()
+        response = _get(site["url"])
         content_type = response.headers.get("content-type", "").lower()
         opening = response.content.lstrip()[:200].lower()
         if "xml" in content_type or opening.startswith(b"<?xml") or b"<rss" in opening or b"<feed" in opening:
