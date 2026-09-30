@@ -30,6 +30,7 @@ with st.form("subscription"):
     previewed = st.form_submit_button("등록 전 공지 미리보기")
 
 selectors = {"item": "tr", "title": "a", "date": "time, .date"}
+site_url = site_url.strip()
 
 if submitted:
     if not email or "@" not in email:
